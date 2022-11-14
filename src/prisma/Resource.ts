@@ -60,9 +60,10 @@ export class Resource extends BaseResource {
   }
 
   public async count(filter: Filter): Promise<number> {
-    return this.manager.count({
-      where: convertFilter(this.model.fields, filter),
-    });
+    const query = this.filterQuery(filter);
+    const { data } = await query;
+    const results: any[] = data || [];
+    return results.length;
   }
 
   public async find(
@@ -70,20 +71,22 @@ export class Resource extends BaseResource {
     params: Record<string, any> = {},
   ): Promise<Array<BaseRecord>> {
     const { limit = 10, offset = 0, sort = {} } = params;
-    const { direction, sortBy } = sort as {
-      direction: 'asc' | 'desc';
-      sortBy: string;
-    };
-    const q = supabase.from(this.model.name).select();
 
-    const results = await this.manager.findMany({
-      where: convertFilter(this.model.fields, filter),
-      skip: offset,
-      take: limit,
-      orderBy: {
-        [sortBy]: direction,
-      },
-    });
+    const query = this.filterQuery(filter);
+    if (limit) {
+      query.limit(limit);
+    }
+    if (offset) {
+      query.range(offset, limit);
+    }
+    if (sort?.sortBy) {
+      const arg =
+        sort.direction === 'asc' ? { ascending: true } : { ascending: false };
+      query.order(sort.sortBy, arg);
+    }
+
+    const { data } = await query;
+    const results: any[] = data || [];
 
     return results.map(
       (result) => new BaseRecord(this.prepareReturnValues(result), this),
@@ -94,12 +97,12 @@ export class Resource extends BaseResource {
     const idProperty = this.properties().find((property) => property.isId());
     if (!idProperty) return null;
 
-    const result = await this.manager.findUnique({
-      where: {
-        [idProperty.path()]: convertParam(idProperty, this.model.fields, id),
-      },
-    });
+    const { data } = await supabase
+      .from(this.model.name)
+      .select()
+      .eq(idProperty.path(), convertParam(idProperty, this.model.fields, id));
 
+    const result = data.length > 0 ? data[0] : [];
     return new BaseRecord(this.prepareReturnValues(result), this);
   }
 
@@ -117,7 +120,8 @@ export class Resource extends BaseResource {
         ids.map((id) => convertParam(idProperty, this.model.fields, id)),
       );
 
-    return data.map(
+    const results: any[] = data || [];
+    return results.map(
       (result) => new BaseRecord(this.prepareReturnValues(result), this),
     );
   }
@@ -253,5 +257,26 @@ export class Resource extends BaseResource {
     }
 
     return preparedValues;
+  }
+
+  private filterQuery(filter: Filter | undefined) {
+    const q = supabase.from(this.model.name).select();
+
+    if (!filter) {
+      return q;
+    }
+
+    const { filters } = filter;
+
+    Object.entries(filters ?? {}).forEach(([key, filter]) => {
+      if (typeof filter.value === 'object') {
+        q.gte(key, filter.value.from);
+        q.lte(key, filter.value.to);
+      } else {
+        q.eq(key, filter.value);
+      }
+    });
+
+    return q;
   }
 }
