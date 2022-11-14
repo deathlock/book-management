@@ -12,7 +12,7 @@ model Author {
   createdAt DateTime @default(now())
   email     String   @unique
   name      String?
-  createdBy String
+  createdBy String   @db.Uuid
   books     Book[]
 }
 
@@ -23,6 +23,6 @@ model Book {
   published Boolean  @default(false)
   title     String   @db.VarChar(255)
   authorId  Int?
-  createdBy String
+  createdBy String   @db.Uuid
   author    Author?  @relation(fields: [authorId], references: [id])
 }
