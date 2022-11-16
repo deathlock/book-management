@@ -8,28 +8,15 @@ import { AdminModule } from '@adminjs/nestjs';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from './services/prisma/prisma.service';
-// import { supabase } from './database/connection';
-import { AuthServices } from './utils/auth.service';
 import { createClient } from '@supabase/supabase-js';
 import { DatabaseService } from './database/database.service';
 
 const authenticate = async (email: string, password: string) => {
-  // await supabase.auth
-  //   .signUp({
-  //     email: email,
-  //     password: password,
-  //   })
-  //   .then((res) => {
-  //     console.log('User registered', res);
-  //   })
-  //   .catch((e) => {
-  //     console.log('User registration error', e);
-  //   });
-
   const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_KEY,
   );
+  //Use signUp for register
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email,
     password: password,
@@ -48,7 +35,6 @@ const authenticate = async (email: string, password: string) => {
       },
     );
     new DatabaseService(supabaseWithAuth);
-    AuthServices.user = data.user;
 
     response = { email, password };
   }
@@ -65,7 +51,6 @@ AdminJS.registerAdapter({
   Resource: AdminJSPrisma.Resource,
   Database: AdminJSPrisma.Database,
 });
-//AdminJS.registerAdapter(Adapter);
 
 @Module({
   imports: [

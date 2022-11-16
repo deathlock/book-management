@@ -9,7 +9,6 @@ import { Property } from './Property';
 import { lowerCase } from './utils/helpers';
 import { ModelManager, Enums } from './types';
 import { convertFilter, convertParam } from './utils/converters';
-import { AuthServices } from 'src/utils/auth.service';
 import { DatabaseService } from 'src/database/database.service';
 
 export class Resource extends BaseResource {
@@ -129,7 +128,8 @@ export class Resource extends BaseResource {
   public async create(
     params: Record<string, any>,
   ): Promise<Record<string, any>> {
-    params['createdBy'] = AuthServices.user.id;
+    const userDetails = await DatabaseService.supabaseClient.auth.getUser();
+    params['createdBy'] = userDetails.data.user.id;
     const preparedParams = this.prepareParams(params);
 
     const result = await DatabaseService.supabaseClient
