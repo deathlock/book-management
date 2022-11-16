@@ -9,9 +9,8 @@ import { Property } from './Property';
 import { lowerCase } from './utils/helpers';
 import { ModelManager, Enums } from './types';
 import { convertFilter, convertParam } from './utils/converters';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { supabase } from '../database/connection';
-import { UserService } from 'src/user/user.service';
+import { AuthServices } from 'src/utils/auth.service';
+import { DatabaseService } from 'src/database/database.service';
 
 export class Resource extends BaseResource {
   private client: PrismaClient;
@@ -28,6 +27,7 @@ export class Resource extends BaseResource {
     super(args);
 
     const { model, client } = args;
+
     this.model = model;
     this.client = client;
     this.enums = (this.client as any)._baseDmmf.datamodelEnumMap;
@@ -97,7 +97,7 @@ export class Resource extends BaseResource {
     const idProperty = this.properties().find((property) => property.isId());
     if (!idProperty) return null;
 
-    const { data } = await supabase
+    const { data } = await DatabaseService.supabaseClient
       .from(this.model.name)
       .select()
       .eq(idProperty.path(), convertParam(idProperty, this.model.fields, id));
@@ -112,7 +112,7 @@ export class Resource extends BaseResource {
     const idProperty = this.properties().find((property) => property.isId());
     if (!idProperty) return [];
 
-    const { data } = await supabase
+    const { data } = await DatabaseService.supabaseClient
       .from(this.model.name)
       .select()
       .in(
@@ -129,10 +129,12 @@ export class Resource extends BaseResource {
   public async create(
     params: Record<string, any>,
   ): Promise<Record<string, any>> {
-    params['createdBy'] = UserService.user.id;
+    params['createdBy'] = AuthServices.user.id;
     const preparedParams = this.prepareParams(params);
 
-    const result = await supabase.from(this.model.name).insert(preparedParams);
+    const result = await DatabaseService.supabaseClient
+      .from(this.model.name)
+      .insert(preparedParams);
 
     return this.prepareReturnValues(result);
   }
@@ -146,7 +148,7 @@ export class Resource extends BaseResource {
 
     const preparedParams = this.prepareParams(params);
 
-    const result = await supabase
+    const result = await DatabaseService.supabaseClient
       .from(this.model.name)
       .update(preparedParams)
       .eq(idProperty.path(), convertParam(idProperty, this.model.fields, pk));
@@ -158,7 +160,7 @@ export class Resource extends BaseResource {
     const idProperty = this.properties().find((property) => property.isId());
     if (!idProperty) return;
 
-    await supabase
+    await DatabaseService.supabaseClient
       .from(this.model.name)
       .delete()
       .eq(idProperty.path(), convertParam(idProperty, this.model.fields, id));
@@ -260,7 +262,7 @@ export class Resource extends BaseResource {
   }
 
   private filterQuery(filter: Filter | undefined) {
-    const q = supabase.from(this.model.name).select();
+    const q = DatabaseService.supabaseClient.from(this.model.name).select();
 
     if (!filter) {
       return q;

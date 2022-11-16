@@ -8,8 +8,10 @@ import { AdminModule } from '@adminjs/nestjs';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from './services/prisma/prisma.service';
-import { supabase } from './database/connection';
-import { UserService } from './user/user.service';
+// import { supabase } from './database/connection';
+import { AuthServices } from './utils/auth.service';
+import { createClient } from '@supabase/supabase-js';
+import { DatabaseService } from './database/database.service';
 
 const authenticate = async (email: string, password: string) => {
   // await supabase.auth
@@ -24,6 +26,10 @@ const authenticate = async (email: string, password: string) => {
   //     console.log('User registration error', e);
   //   });
 
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY,
+  );
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email,
     password: password,
@@ -32,7 +38,17 @@ const authenticate = async (email: string, password: string) => {
   let response = null;
 
   if (data) {
-    UserService.user = data.user;
+    const supabaseWithAuth = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY,
+      {
+        global: {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        },
+      },
+    );
+    new DatabaseService(supabaseWithAuth);
+    AuthServices.user = data.user;
 
     response = { email, password };
   }
@@ -76,7 +92,10 @@ AdminJS.registerAdapter({
 
             resources: [
               {
-                resource: { model: dmmf.modelMap.Book, client: prisma },
+                resource: {
+                  model: dmmf.modelMap.Book,
+                  client: prisma,
+                },
                 options: {
                   properties: {
                     createdBy: {
@@ -91,7 +110,10 @@ AdminJS.registerAdapter({
                 },
               },
               {
-                resource: { model: dmmf.modelMap.Author, client: prisma },
+                resource: {
+                  model: dmmf.modelMap.Author,
+                  client: prisma,
+                },
                 options: {
                   properties: {
                     createdBy: {
