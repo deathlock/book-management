@@ -24,5 +24,17 @@ model Book {
   title     String   @db.VarChar(255)
   authorId  Int?
   createdBy String   @db.Uuid
+  image     String?  @db.VarChar
   author    Author?  @relation(fields: [authorId], references: [id])
+}
+
+model Files {
+  id         BigInt    @id @default(autoincrement())
+  s3key      Json?
+  bucket     Json?
+  mime       Json?
+  comment    String?
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  createdBy  String?   @default(dbgenerated("auth.uid()")) @db.Uuid
 }

@@ -10,6 +10,8 @@ import { AppService } from './app.service';
 import { PrismaService } from './services/prisma/prisma.service';
 import { createClient } from '@supabase/supabase-js';
 import { DatabaseService } from './database/database.service';
+import uploadFeature from '@adminjs/upload';
+import { SupabaseProvider } from './storage/supabase.storage';
 
 const authenticate = async (email: string, password: string) => {
   const supabase = createClient(
@@ -91,8 +93,26 @@ AdminJS.registerAdapter({
                         filter: false,
                       },
                     },
+                    image: {
+                      isVisible: false,
+                    },
                   },
                 },
+                features: [
+                  uploadFeature({
+                    provider: new SupabaseProvider({
+                      bucket: 'files',
+                      storageUrl: process.env.STORAGE_URL,
+                      serviceKey: process.env.SUPABASE_SERVICE_KEY,
+                    }),
+                    properties: {
+                      key: 'image',
+                    },
+                    validation: {
+                      mimeTypes: ['image/jpeg', 'image/jpg', 'image/png'],
+                    },
+                  }),
+                ],
               },
               {
                 resource: {
