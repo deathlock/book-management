@@ -60,7 +60,7 @@ AdminJS.registerAdapter({
       isGlobal: true,
     }),
     AdminModule.createAdminAsync({
-      useFactory: async () => {
+      useFactory: () => {
         const prisma = new PrismaService();
         const dmmf = (prisma as any)._baseDmmf as DMMFClass;
 
@@ -129,8 +129,26 @@ AdminJS.registerAdapter({
                         filter: false,
                       },
                     },
+                    avatar: {
+                      isVisible: false,
+                    },
                   },
                 },
+                features: [
+                  uploadFeature({
+                    provider: new SupabaseProvider({
+                      bucket: 'avatar',
+                      storageUrl: process.env.STORAGE_URL,
+                      serviceKey: process.env.SUPABASE_SERVICE_KEY,
+                    }),
+                    properties: {
+                      key: 'avatar',
+                    },
+                    validation: {
+                      mimeTypes: ['image/jpeg', 'image/jpg', 'image/png'],
+                    },
+                  }),
+                ],
               },
             ],
             assets: {
@@ -141,6 +159,11 @@ AdminJS.registerAdapter({
             authenticate,
             cookieName: 'adminjs',
             cookiePassword: 'secret',
+          },
+          sessionOptions: {
+            resave: true,
+            saveUninitialized: true,
+            secret: 'secret',
           },
         };
       },

@@ -20,7 +20,6 @@ export class SupabaseProvider extends BaseProvider {
       Authorization: `Bearer ${options.serviceKey}`,
     });
     this.supabase = storageClient;
-    console.log('constructor', this.supabase);
   }
 
   public async upload(
@@ -36,9 +35,7 @@ export class SupabaseProvider extends BaseProvider {
         error: StorageError;
       }
   > {
-    console.log('in upload', createReadStream);
     const tmpFile = createReadStream(file.path);
-    console.log('in upload', this.bucket);
     return this.supabase.from(this.bucket).upload(key, tmpFile);
   }
 
@@ -64,7 +61,6 @@ export class SupabaseProvider extends BaseProvider {
     const { data } = await this.supabase
       .from(bucket)
       .createSignedUrl(key, expireIn);
-    console.log('in path', data);
     if (data) {
       return data.signedUrl;
     }
