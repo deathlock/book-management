@@ -72,19 +72,18 @@ export class Resource extends BaseResource {
     const { limit = 10, offset = 0, sort = {} } = params;
 
     const query = this.filterQuery(filter);
-    if (limit) {
-      query.limit(limit);
-    }
-    if (offset) {
-      query.range(offset, limit);
-    }
+
     if (sort?.sortBy) {
       const arg =
         sort.direction === 'asc' ? { ascending: true } : { ascending: false };
       query.order(sort.sortBy, arg);
     }
+    query.order('id', { ascending: true });
+
+    query.range(offset, offset + limit - 1);
 
     const { data } = await query;
+
     const results: any[] = data || [];
 
     return results.map(
@@ -131,10 +130,12 @@ export class Resource extends BaseResource {
     const userDetails = await DatabaseService.supabaseClient.auth.getUser();
     params['createdBy'] = userDetails.data.user.id;
     const preparedParams = this.prepareParams(params);
-
-    const result = await DatabaseService.supabaseClient
+    const { data } = await DatabaseService.supabaseClient
       .from(this.model.name)
-      .insert(preparedParams);
+      .insert(preparedParams)
+      .select()
+      .maybeSingle();
+    const result = data;
 
     return this.prepareReturnValues(result);
   }
@@ -272,9 +273,11 @@ export class Resource extends BaseResource {
 
     Object.entries(filters ?? {}).forEach(([key, filter]) => {
       if (typeof filter.value === 'object') {
+        console.log('in if', filter.value);
         q.gte(key, filter.value.from);
         q.lte(key, filter.value.to);
       } else {
+        console.log('in else', filter.value);
         q.eq(key, filter.value);
       }
     });
