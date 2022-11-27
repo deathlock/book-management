@@ -12,6 +12,11 @@ import { createClient } from '@supabase/supabase-js';
 import { DatabaseService } from './database/database.service';
 import uploadFeature from '@adminjs/upload';
 import { SupabaseProvider } from './storage/supabase.storage';
+import { componentLoader, Components } from './components';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { DatabaseController } from './database/database.controller';
+import { DatabaseModule } from './database/database.module';
 
 const authenticate = async (email: string, password: string) => {
   const supabase = createClient(
@@ -56,6 +61,9 @@ AdminJS.registerAdapter({
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -76,7 +84,6 @@ AdminJS.registerAdapter({
             //   component: AdminJS.bundle('./components/dashboard/index.tsx'),
             // },
             rootPath: '/admin',
-
             resources: [
               {
                 resource: {
@@ -151,8 +158,17 @@ AdminJS.registerAdapter({
                 ],
               },
             ],
+            componentLoader,
             assets: {
               styles: ['/style.css'],
+            },
+            pages: {
+              ErDiagram: {
+                component: Components.ErDiagram,
+              },
+              BucketExplorer: {
+                component: Components.BucketExplorer,
+              },
             },
           },
           auth: {
@@ -168,8 +184,9 @@ AdminJS.registerAdapter({
         };
       },
     }),
+    DatabaseModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, DatabaseController],
   providers: [AppService],
 })
 export class AppModule {}
