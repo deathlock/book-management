@@ -40,13 +40,29 @@ export class DatabaseController {
   async getContents(@Body() buckets) {
     const finalObj = {};
 
+    async function getFolderContent(folderName, bucketName) {
+      const { data } = await DatabaseService.storageClient
+        .from(bucketName)
+        .list(folderName);
+      return data;
+    }
     const contentPromises = buckets.bucketName.map(async (el) => {
       const { data } = await DatabaseService.storageClient.from(el.name).list();
       finalObj[el.name] = data;
     });
-    Promise.all(contentPromises).then(() => {
-      // console.debug('check', result);
-      console.log('check', finalObj);
+    return Promise.all(contentPromises).then(() => {
+      const bucketPromises = Object.keys(finalObj).map((el) => {
+        const folderPromises = finalObj[el].map(async (folder, key) => {
+          const content = await getFolderContent(folder.name, el);
+          finalObj[el][key]['content'] = content;
+        });
+        return Promise.all(folderPromises).then(() => {
+          return finalObj;
+        });
+      });
+      return Promise.all(bucketPromises).then(() => {
+        return finalObj;
+      });
     });
   }
 }

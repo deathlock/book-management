@@ -4,6 +4,10 @@ import Tab from '@mui/material/Tab';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import axios from 'axios';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -41,6 +45,7 @@ function a11yProps(index: number) {
 export default function BasicTabs() {
   const [value, setValue] = React.useState(0);
   const [buckets, setBuckets] = React.useState([]);
+  const [bucketContents, setBucketContents] = React.useState(null);
 
   async function getBuckets() {
     const buckets = await axios.get('/database/getBuckets');
@@ -51,6 +56,7 @@ export default function BasicTabs() {
     const bucketContent = await axios.post('/database/getContents', {
       bucketName: buckets,
     });
+    setBucketContents(bucketContent.data);
   }
   React.useEffect(() => {
     getBuckets();
@@ -81,7 +87,29 @@ export default function BasicTabs() {
       {buckets.map((el, key) => {
         return (
           <TabPanel key={el.id} value={value} index={key}>
-            {el.name}
+            {bucketContents &&
+              bucketContents[el.name].map((folders, key) => {
+                return (
+                  <Accordion key={key}>
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      aria-controls={`panel1a-content-${key}`}
+                      id={`panel1a-content-${key}`}
+                    >
+                      <Typography>{folders.name}</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      {bucketContents[el.name][key]['content'].map(
+                        (files, fileKey) => {
+                          return (
+                            <Typography key={fileKey}>{files.name}</Typography>
+                          );
+                        },
+                      )}
+                    </AccordionDetails>
+                  </Accordion>
+                );
+              })}
           </TabPanel>
         );
       })}
