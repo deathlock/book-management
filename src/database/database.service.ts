@@ -4,11 +4,15 @@ import { StorageClient } from '@supabase/storage-js';
 
 @Injectable()
 export class DatabaseService {
-  static supabaseClient: SupabaseClient;
+  static supabaseClient: Record<string, SupabaseClient> = {};
+  //static supabaseClient: SupabaseClient;
   static storageClient;
 
-  constructor(private readonly supabaseWithAuth: SupabaseClient) {
-    DatabaseService.supabaseClient = supabaseWithAuth;
+  constructor(
+    private readonly supabaseWithAuth: SupabaseClient<any, any, any>,
+    private readonly schemaName: string,
+  ) {
+    DatabaseService.supabaseClient[schemaName] = supabaseWithAuth;
     DatabaseService.storageClient = new StorageClient(process.env.STORAGE_URL, {
       apikey: process.env.SUPABASE_SERVICE_KEY,
       Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,

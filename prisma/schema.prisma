@@ -1,10 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 generator erd {
@@ -12,6 +8,13 @@ generator erd {
   output   = "../public/images/ERD.svg"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["permission_schema", "public"]
+}
+
+/// public
 model Author {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
@@ -20,8 +23,11 @@ model Author {
   createdBy String   @db.Uuid
   avatar    String?  @db.VarChar
   books     Book[]
+
+  @@schema("public")
 }
 
+/// public
 model Book {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
@@ -32,4 +38,15 @@ model Book {
   createdBy String   @db.Uuid
   image     String?  @db.VarChar
   author    Author?  @relation(fields: [authorId], references: [id])
+
+  @@schema("public")
+}
+
+/// permission_schema
+model notes {
+  id        BigInt  @id @default(autoincrement())
+  note      String? @db.VarChar
+  createdBy String? @db.Uuid
+
+  @@schema("permission_schema")
 }

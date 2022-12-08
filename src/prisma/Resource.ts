@@ -3,13 +3,14 @@
 /* eslint-disable no-param-reassign */
 import { BaseResource, Filter, BaseRecord, flat } from 'adminjs';
 import { PrismaClient } from '@prisma/client';
-import { DMMF } from '@prisma/client/runtime';
+import { DMMF, DMMFClass } from '@prisma/client/runtime';
 
 import { Property } from './Property';
 import { lowerCase } from './utils/helpers';
 import { ModelManager, Enums } from './types';
 import { convertFilter, convertParam } from './utils/converters';
 import { DatabaseService } from 'src/database/database.service';
+import { PrismaService } from 'src/services/prisma/prisma.service';
 
 export class Resource extends BaseResource {
   private client: PrismaClient;
@@ -22,6 +23,8 @@ export class Resource extends BaseResource {
 
   private propertiesObject: Record<string, any>;
 
+  private dmmf: DMMFClass;
+
   constructor(args: { model: DMMF.Model; client: PrismaClient }) {
     super(args);
 
@@ -29,6 +32,8 @@ export class Resource extends BaseResource {
 
     this.model = model;
     this.client = client;
+    const prisma = new PrismaService();
+    this.dmmf = (prisma as any)._baseDmmf as DMMFClass;
     this.enums = (this.client as any)._baseDmmf.datamodelEnumMap;
     this.manager = this.client[lowerCase(model.name)];
     this.propertiesObject = this.prepareProperties();
@@ -95,8 +100,10 @@ export class Resource extends BaseResource {
     const idProperty = this.properties().find((property) => property.isId());
     if (!idProperty) return null;
 
-    const { data } = await DatabaseService.supabaseClient
-      .from(this.model.name)
+    const DbConnection = await DatabaseService.supabaseClient[
+      this.dmmf.modelMap[this.model.name]['documentation'] ?? 'public'
+    ];
+    const { data } = await DbConnection.from(this.model.name)
       .select()
       .eq(idProperty.path(), convertParam(idProperty, this.model.fields, id));
 
@@ -109,9 +116,10 @@ export class Resource extends BaseResource {
   ): Promise<Array<BaseRecord>> {
     const idProperty = this.properties().find((property) => property.isId());
     if (!idProperty) return [];
-
-    const { data } = await DatabaseService.supabaseClient
-      .from(this.model.name)
+    const DbConnection = await DatabaseService.supabaseClient[
+      this.dmmf.modelMap[this.model.name]['documentation'] ?? 'public'
+    ];
+    const { data } = await DbConnection.from(this.model.name)
       .select()
       .in(
         idProperty.path(),
@@ -127,14 +135,19 @@ export class Resource extends BaseResource {
   public async create(
     params: Record<string, any>,
   ): Promise<Record<string, any>> {
-    const userDetails = await DatabaseService.supabaseClient.auth.getUser();
+    const DbConnection = await DatabaseService.supabaseClient[
+      this.dmmf.modelMap[this.model.name]['documentation'] ?? 'public'
+    ];
+
+    const userDetails = await DbConnection.auth.getUser();
+
     params['createdBy'] = userDetails.data.user.id;
     const preparedParams = this.prepareParams(params);
-    const { data } = await DatabaseService.supabaseClient
-      .from(this.model.name)
+    const { data } = await DbConnection.from(this.model.name)
       .insert(preparedParams)
       .select()
       .maybeSingle();
+
     const result = data;
 
     return this.prepareReturnValues(result);
@@ -149,8 +162,11 @@ export class Resource extends BaseResource {
 
     const preparedParams = this.prepareParams(params);
 
-    const result = await DatabaseService.supabaseClient
-      .from(this.model.name)
+    const DbConnection = await DatabaseService.supabaseClient[
+      this.dmmf.modelMap[this.model.name]['documentation'] ?? 'public'
+    ];
+
+    const result = await DbConnection.from(this.model.name)
       .update(preparedParams)
       .eq(idProperty.path(), convertParam(idProperty, this.model.fields, pk));
 
@@ -161,8 +177,11 @@ export class Resource extends BaseResource {
     const idProperty = this.properties().find((property) => property.isId());
     if (!idProperty) return;
 
-    await DatabaseService.supabaseClient
-      .from(this.model.name)
+    const DbConnection = await DatabaseService.supabaseClient[
+      this.dmmf.modelMap[this.model.name]['documentation'] ?? 'public'
+    ];
+
+    await DbConnection.from(this.model.name)
       .delete()
       .eq(idProperty.path(), convertParam(idProperty, this.model.fields, id));
   }
@@ -263,7 +282,12 @@ export class Resource extends BaseResource {
   }
 
   private filterQuery(filter: Filter | undefined) {
-    const q = DatabaseService.supabaseClient.from(this.model.name).select();
+    const DbConnection =
+      DatabaseService.supabaseClient[
+        this.dmmf.modelMap[this.model.name]['documentation'] ?? 'public'
+      ];
+
+    const q = DbConnection.from(this.model.name).select();
 
     if (!filter) {
       return q;

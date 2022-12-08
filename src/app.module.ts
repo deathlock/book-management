@@ -41,7 +41,21 @@ const authenticate = async (email: string, password: string) => {
         },
       },
     );
-    new DatabaseService(supabaseWithAuth);
+    new DatabaseService(supabaseWithAuth, 'public');
+
+    const supabaseWithAuthPermissionSchema = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY,
+      {
+        global: {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        },
+        db: {
+          schema: 'permission_schema',
+        },
+      },
+    );
+    new DatabaseService(supabaseWithAuthPermissionSchema, 'permission_schema');
 
     response = { email, password };
   }
@@ -71,7 +85,7 @@ AdminJS.registerAdapter({
       useFactory: () => {
         const prisma = new PrismaService();
         const dmmf = (prisma as any)._baseDmmf as DMMFClass;
-
+        //console.debug('check ', dmmf.modelMap['Author']['documentation']);
         return {
           adminJsOptions: {
             branding: {
@@ -156,6 +170,24 @@ AdminJS.registerAdapter({
                     },
                   }),
                 ],
+              },
+              {
+                resource: {
+                  model: dmmf.modelMap.notes,
+                  client: prisma,
+                },
+                options: {
+                  properties: {
+                    createdBy: {
+                      isVisible: {
+                        edit: false,
+                        show: false,
+                        list: false,
+                        filter: false,
+                      },
+                    },
+                  },
+                },
               },
             ],
             componentLoader,
