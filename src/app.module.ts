@@ -32,30 +32,8 @@ const authenticate = async (email: string, password: string) => {
   let response = null;
 
   if (data) {
-    const supabaseWithAuth = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY,
-      {
-        global: {
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        },
-      },
-    );
-    new DatabaseService(supabaseWithAuth, 'public');
-
-    const supabaseWithAuthPermissionSchema = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY,
-      {
-        global: {
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        },
-        db: {
-          schema: 'permission_schema',
-        },
-      },
-    );
-    new DatabaseService(supabaseWithAuthPermissionSchema, 'permission_schema');
+    DatabaseService.userTokenMapping[data.session.user.email] =
+      data.session.access_token;
 
     response = { email, password };
   }
@@ -72,6 +50,43 @@ AdminJS.registerAdapter({
   Resource: AdminJSPrisma.Resource,
   Database: AdminJSPrisma.Database,
 });
+
+const customBefore = (request) => {
+  const supabaseWithAuth = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${
+            DatabaseService.userTokenMapping[request.session.adminUser.email]
+          }`,
+        },
+      },
+    },
+  );
+  new DatabaseService(supabaseWithAuth, 'public');
+
+  const supabaseWithAuthPermissionSchema = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${
+            DatabaseService.userTokenMapping[request.session.adminUser.email]
+          }`,
+        },
+      },
+      db: {
+        schema: 'permission_schema',
+      },
+    },
+  );
+  new DatabaseService(supabaseWithAuthPermissionSchema, 'permission_schema');
+
+  return request;
+};
 
 @Module({
   imports: [
@@ -118,6 +133,29 @@ AdminJS.registerAdapter({
                       isVisible: false,
                     },
                   },
+                  actions: {
+                    list: {
+                      before: [customBefore],
+                    },
+                    edit: {
+                      before: [customBefore],
+                    },
+                    show: {
+                      before: [customBefore],
+                    },
+                    delete: {
+                      before: [customBefore],
+                    },
+                    bulkDelete: {
+                      before: [customBefore],
+                    },
+                    new: {
+                      before: [customBefore],
+                    },
+                    search: {
+                      before: [customBefore],
+                    },
+                  },
                 },
                 features: [
                   uploadFeature({
@@ -154,6 +192,29 @@ AdminJS.registerAdapter({
                       isVisible: false,
                     },
                   },
+                  actions: {
+                    list: {
+                      before: [customBefore],
+                    },
+                    edit: {
+                      before: [customBefore],
+                    },
+                    show: {
+                      before: [customBefore],
+                    },
+                    delete: {
+                      before: [customBefore],
+                    },
+                    bulkDelete: {
+                      before: [customBefore],
+                    },
+                    new: {
+                      before: [customBefore],
+                    },
+                    search: {
+                      before: [customBefore],
+                    },
+                  },
                 },
                 features: [
                   uploadFeature({
@@ -185,6 +246,29 @@ AdminJS.registerAdapter({
                         list: false,
                         filter: false,
                       },
+                    },
+                  },
+                  actions: {
+                    list: {
+                      before: [customBefore],
+                    },
+                    edit: {
+                      before: [customBefore],
+                    },
+                    show: {
+                      before: [customBefore],
+                    },
+                    delete: {
+                      before: [customBefore],
+                    },
+                    bulkDelete: {
+                      before: [customBefore],
+                    },
+                    new: {
+                      before: [customBefore],
+                    },
+                    search: {
+                      before: [customBefore],
                     },
                   },
                 },
